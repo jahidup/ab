@@ -9,7 +9,7 @@ const { Readable } = require('stream');
 
 const app = express();
 
-// ---------- Use memory storage for multer (no disk writes) ----------
+// ---------- Memory storage for multer (no disk writes) ----------
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -24,8 +24,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ---------- Mongoose Models ----------
-const Student = mongoose.model('Student', new mongoose.Schema({
+// ---------- Mongoose Models (with recompilation check) ----------
+const studentSchema = new mongoose.Schema({
   studentId: { type: String, required: true, unique: true },
   fullName: { type: String, required: true },
   dob: { type: String, required: true },
@@ -36,9 +36,10 @@ const Student = mongoose.model('Student', new mongoose.Schema({
   status: { type: String, enum: ['active', 'blocked'], default: 'active' },
   blockReason: String,
   blockedAt: Date
-}));
+});
+const Student = mongoose.models.Student || mongoose.model('Student', studentSchema);
 
-const Test = mongoose.model('Test', new mongoose.Schema({
+const testSchema = new mongoose.Schema({
   testId: { type: String, required: true, unique: true },
   testName: { type: String, required: true },
   duration: { type: Number, required: true },
@@ -48,9 +49,10 @@ const Test = mongoose.model('Test', new mongoose.Schema({
     skip: { type: Number, default: 0 }
   },
   shuffle: { type: Boolean, default: false }
-}));
+});
+const Test = mongoose.models.Test || mongoose.model('Test', testSchema);
 
-const Question = mongoose.model('Question', new mongoose.Schema({
+const questionSchema = new mongoose.Schema({
   testId: { type: String, required: true },
   questionId: { type: String, required: true },
   type: { type: String, enum: ['mcq', 'numerical'], required: true },
@@ -70,10 +72,11 @@ const Question = mongoose.model('Question', new mongoose.Schema({
     skip: Number
   },
   imageUrls: [String]
-}));
-Question.index({ testId: 1, questionId: 1 }, { unique: true });
+});
+questionSchema.index({ testId: 1, questionId: 1 }, { unique: true });
+const Question = mongoose.models.Question || mongoose.model('Question', questionSchema);
 
-const Result = mongoose.model('Result', new mongoose.Schema({
+const resultSchema = new mongoose.Schema({
   studentId: { type: String, required: true },
   testId: { type: String, required: true },
   score: { type: Number, required: true },
@@ -85,29 +88,33 @@ const Result = mongoose.model('Result', new mongoose.Schema({
     isCorrect: Boolean,
     marksAwarded: Number
   }]
-}));
-Result.index({ testId: 1, studentId: 1 }, { unique: true });
+});
+resultSchema.index({ testId: 1, studentId: 1 }, { unique: true });
+const Result = mongoose.models.Result || mongoose.model('Result', resultSchema);
 
-const Discussion = mongoose.model('Discussion', new mongoose.Schema({
+const discussionSchema = new mongoose.Schema({
   testId: { type: String, required: true },
   title: { type: String, required: true },
   description: String,
   link: String,
   createdAt: { type: Date, default: Date.now }
-}));
+});
+const Discussion = mongoose.models.Discussion || mongoose.model('Discussion', discussionSchema);
 
-const Message = mongoose.model('Message', new mongoose.Schema({
+const messageSchema = new mongoose.Schema({
   studentId: String,
   sender: { type: String, enum: ['student', 'admin'], required: true },
   content: { type: String, required: true },
   isUnblockRequest: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
-}));
+});
+const Message = mongoose.models.Message || mongoose.model('Message', messageSchema);
 
-const Config = mongoose.model('Config', new mongoose.Schema({
+const configSchema = new mongoose.Schema({
   key: { type: String, unique: true },
   value: mongoose.Schema.Types.Mixed
-}));
+});
+const Config = mongoose.models.Config || mongoose.model('Config', configSchema);
 
 // ---------- Initialize Default Admin Credentials ----------
 (async () => {
@@ -225,7 +232,6 @@ app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, 
   const results = [];
   const errors = [];
 
-  // Convert buffer to readable stream
   const bufferStream = new Readable();
   bufferStream.push(req.file.buffer);
   bufferStream.push(null);
