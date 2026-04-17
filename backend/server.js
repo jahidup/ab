@@ -5,10 +5,13 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const csv = require('csv-parser');
-const fs = require('fs');
+const { Readable } = require('stream');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+
+// ---------- Use memory storage for multer (no disk writes) ----------
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 app.use(cors());
 app.use(express.json());
@@ -212,13 +215,22 @@ app.delete('/api/questions/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// ========== CSV UPLOAD FOR QUESTIONS ==========
+// ========== CSV UPLOAD (Memory Storage) ==========
 app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, res) => {
   const testId = req.params.testId;
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+
   const results = [];
   const errors = [];
 
-  fs.createReadStream(req.file.path)
+  // Convert buffer to readable stream
+  const bufferStream = new Readable();
+  bufferStream.push(req.file.buffer);
+  bufferStream.push(null);
+
+  bufferStream
     .pipe(csv())
     .on('data', (row) => {
       try {
@@ -263,8 +275,6 @@ app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, 
       }
     })
     .on('end', async () => {
-      fs.unlinkSync(req.file.path);
-
       if (errors.length) {
         return res.status(400).json({ success: false, errors });
       }
@@ -385,7 +395,6 @@ app.post('/api/settings/password', async (req, res) => {
 });
 
 // ========== SERVE FRONTEND (only for local dev) ==========
-// In production on Vercel, static files are handled by vercel.json routes
 if (process.env.NODE_ENV !== 'production') {
   app.use('/admin', express.static(path.join(__dirname, '../frontend/admin')));
   app.use('/student', express.static(path.join(__dirname, '../frontend/student')));
