@@ -1,0 +1,29 @@
+* { box-sizing: border-box; margin: 0; font-family: system-ui, sans-serif; }
+body { background: #f5f7fa; padding: 20px; }
+.container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #2c3e50; color: white; }
+header button { background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+.tabs { display: flex; flex-wrap: wrap; background: #ecf0f1; padding: 8px 8px 0; gap: 4px; }
+.tablink { background: none; border: none; padding: 10px 16px; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: 500; }
+.tablink.active { background: white; color: #2c3e50; }
+.tabcontent { display: none; padding: 24px; }
+.tabcontent.active { display: block; }
+h2 { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.refresh { cursor: pointer; font-size: 24px; color: #3498db; }
+input, select, textarea { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; margin: 5px 5px 5px 0; }
+button { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px 5px 5px 0; }
+button.danger { background: #e74c3c; }
+button.success { background: #2ecc71; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f8f9fa; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+.modal { background: white; padding: 24px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.login-container { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+.login-container input { width: 100%; margin: 10px 0; }
+.error { color: #e74c3c; margin-top: 10px; }
+.message-bubble { padding: 12px; border-radius: 12px; margin: 8px 0; max-width: 70%; }
+.student-message { background: #3498db; color: white; align-self: flex-end; }
+.admin-message { background: #ecf0f1; color: #2c3e50; align-self: flex-start; }
+#messagesContainer { display: flex; flex-direction: column; }
+.csv-upload { margin-left: 10px; }
