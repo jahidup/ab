@@ -1,16 +1,34 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Login</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login · NexGen Exam</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="login-container">
-    <h2>Admin Login</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
-    <button id="loginBtn">Login</button>
-    <p id="errorMsg"></p>
+<body class="login-page">
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>Admin Portal</h2>
+        <p>Secure access for authorized personnel</p>
+      </div>
+      <div class="login-body">
+        <div class="input-group">
+          <label>Username</label>
+          <input type="text" id="username" placeholder="Enter username" autocomplete="off">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <button id="loginBtn" class="btn-primary">Sign In</button>
+        <p id="errorMsg" class="error-msg"></p>
+      </div>
+      <div class="login-footer">
+        <a href="https://nexgenaitech.online" target="_blank">Powered by <strong>NexGenAiTech</strong></a>
+      </div>
+    </div>
   </div>
   <script>
     document.getElementById('loginBtn').onclick = async () => {
@@ -24,7 +42,7 @@
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('adminToken', data.token);
-        location.href = 'dashboard.html';
+        location.replace('dashboard.html');
       } else {
         document.getElementById('errorMsg').innerText = data.message;
       }
