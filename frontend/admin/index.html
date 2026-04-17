@@ -7,8 +7,8 @@
 <body>
   <div class="login-container">
     <h2>Admin Login</h2>
-    <input type="text" id="username" placeholder="Username" value="Jahid@Admin">
-    <input type="password" id="password" placeholder="Password" value="Jahid@Admin">
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
     <button id="loginBtn">Login</button>
     <p id="errorMsg"></p>
   </div>
@@ -23,7 +23,7 @@
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('adminToken', 'true');
+        localStorage.setItem('adminToken', data.token);
         location.href = 'dashboard.html';
       } else {
         document.getElementById('errorMsg').innerText = data.message;
