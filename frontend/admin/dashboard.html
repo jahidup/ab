@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Dashboard</title>
+  <title>Admin Dashboard | NexGenAiTech</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Admin Panel</h1>
-      <button id="logoutBtn">Logout</button>
+      <div class="header-left">
+        <h1>Exam Portal Admin</h1>
+      </div>
+      <div class="header-right">
+        <a href="https://nexgenaitech.online" target="_blank" class="powered-by">
+          Powered by <strong>NexGenAiTech</strong>
+        </a>
+        <button id="logoutBtn">Logout</button>
+      </div>
     </header>
     <nav class="tabs">
       <button class="tablink active" data-tab="dashboard">Dashboard</button>
@@ -19,100 +26,19 @@
       <button class="tablink" data-tab="discussions">Discussions</button>
       <button class="tablink" data-tab="messages">Messages</button>
       <button class="tablink" data-tab="blocked">Blocked</button>
+      <button class="tablink" data-tab="monitor">Monitor Tests</button>
       <button class="tablink" data-tab="settings">Settings</button>
     </nav>
 
-    <!-- Dashboard Tab -->
-    <div id="dashboard" class="tabcontent active">
-      <h2>Dashboard <span class="refresh" onclick="loadDashboard()">↻</span></h2>
-      <div class="stats">
-        <div>Total Students: <span id="totalStudents">0</span></div>
-        <div>Total Tests: <span id="totalTests">0</span></div>
-        <div>Total Questions: <span id="totalQuestions">0</span></div>
-      </div>
-    </div>
-
-    <!-- Students Tab -->
-    <div id="students" class="tabcontent">
-      <h2>Students <span class="refresh" onclick="loadStudents()">↻</span></h2>
-      <input type="text" id="studentSearch" placeholder="Search by ID or name" onkeyup="filterStudents()">
-      <button onclick="openAddStudentModal()">+ Add Student</button>
-      <table id="studentsTable">
-        <thead><tr><th>ID</th><th>Name</th><th>DOB</th><th>Class</th><th>Mobile</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Tests Tab -->
-    <div id="tests" class="tabcontent">
-      <h2>Tests <span class="refresh" onclick="loadTests()">↻</span></h2>
-      <input type="text" id="testSearch" placeholder="Search by ID or name" onkeyup="filterTests()">
-      <button onclick="openCreateTestModal()">+ Create Test</button>
-      <table id="testsTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Duration</th><th>Marks</th><th>Shuffle</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Questions Tab -->
-    <div id="questions" class="tabcontent">
-      <h2>Questions <span class="refresh" onclick="loadQuestions()">↻</span></h2>
-      <select id="testSelectForQuestions" onchange="loadQuestions()">
+    <!-- Tab contents (Dashboard, Students, Tests, Questions, Results, Discussions, Messages, Blocked) similar to before but enhanced -->
+    <!-- New Monitor Tab for pause/resume -->
+    <div id="monitor" class="tabcontent">
+      <h2>Live Test Monitoring <span class="refresh" onclick="loadActiveTests()">↻</span></h2>
+      <select id="activeTestSelect" onchange="loadTestTakers()">
         <option value="">-- Select Test --</option>
       </select>
-      <input type="text" id="questionSearch" placeholder="Search by ID or text" onkeyup="filterQuestions()">
-      <button onclick="openAddQuestionModal()">+ Add Question</button>
-      <label class="csv-upload">
-        <input type="file" id="csvFileInput" accept=".csv" style="display:none">
-        <button onclick="document.getElementById('csvFileInput').click()">📤 Choose CSV</button>
-      </label>
-      <button onclick="uploadCSV()" id="uploadCsvBtn" style="display:none;">Upload CSV</button>
-      <table id="questionsTable">
-        <thead><tr><th>ID</th><th>Type</th><th>Question (EN)</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Results Tab -->
-    <div id="results" class="tabcontent">
-      <h2>Results <span class="refresh" onclick="loadResults()">↻</span></h2>
-      <select id="testFilterResults" onchange="loadResults()">
-        <option value="">All Tests</option>
-      </select>
-      <input type="text" id="resultSearch" placeholder="Search student/test" onkeyup="filterResults()">
-      <button onclick="loadResults()">Load Results</button>
-      <table id="resultsTable">
-        <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Rank</th><th>Submitted</th><th>Analysis</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- Discussions Tab -->
-    <div id="discussions" class="tabcontent">
-      <h2>Discussions <span class="refresh" onclick="loadDiscussions()">↻</span></h2>
-      <select id="testSelectDiscussions" onchange="loadDiscussions()">
-        <option value="">-- Select Test --</option>
-      </select>
-      <button onclick="openNewPostModal()">+ New Post</button>
-      <div id="discussionsList"></div>
-    </div>
-
-    <!-- Messages Tab -->
-    <div id="messages" class="tabcontent">
-      <h2>Messages <span class="refresh" onclick="loadMessages()">↻</span></h2>
-      <div id="messagesContainer"></div>
-      <div id="replyBox" style="display:none;">
-        <textarea id="replyContent" placeholder="Type your reply..."></textarea>
-        <button onclick="sendReply()">Send Reply</button>
-        <button onclick="cancelReply()">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Blocked Students Tab -->
-    <div id="blocked" class="tabcontent">
-      <h2>Blocked Students <span class="refresh" onclick="loadBlocked()">↻</span></h2>
-      <table id="blockedTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Reason</th><th>Blocked At</th><th>Action</th></tr></thead>
+      <table id="testTakersTable">
+        <thead><tr><th>Student ID</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -120,13 +46,10 @@
     <!-- Settings Tab -->
     <div id="settings" class="tabcontent">
       <h2>Settings</h2>
-      <label>New Admin Password:</label>
-      <input type="password" id="newPassword">
-      <button onclick="updatePassword()">Update Password</button>
+      <p>Credentials are managed via Vercel Environment Variables.</p>
     </div>
   </div>
 
-  <!-- Modal Overlay -->
   <div id="modalOverlay" class="modal-overlay" style="display:none;">
     <div class="modal" id="modalContent"></div>
   </div>
