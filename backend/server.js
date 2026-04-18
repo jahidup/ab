@@ -13,12 +13,15 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+// ---------- MongoDB Connection ----------
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ---------- Models (with recompilation check) ----------
+// ---------- Mongoose Models (with recompilation check) ----------
 const studentSchema = new mongoose.Schema({
   studentId: { type: String, required: true, unique: true },
   fullName: { type: String, required: true },
@@ -51,25 +54,35 @@ const testSchema = new mongoose.Schema({
 const Test = mongoose.models.Test || mongoose.model('Test', testSchema);
 
 const questionSchema = new mongoose.Schema({
-  testId: String,
-  questionId: String,
-  type: { type: String, enum: ['mcq', 'numerical'] },
-  questionText: { en: String, hi: String },
-  options: [{ en: String, hi: String }],
+  testId: { type: String, required: true },
+  questionId: { type: String, required: true },
+  type: { type: String, enum: ['mcq', 'numerical'], required: true },
+  questionText: {
+    en: { type: String, required: true },
+    hi: String
+  },
+  options: [{
+    en: String,
+    hi: String
+  }],
   correctAnswer: mongoose.Schema.Types.Mixed,
   tolerance: Number,
-  marks: { correct: Number, wrong: Number, skip: Number },
+  marks: {
+    correct: Number,
+    wrong: Number,
+    skip: Number
+  },
   imageUrls: [String]
 });
 questionSchema.index({ testId: 1, questionId: 1 }, { unique: true });
 const Question = mongoose.models.Question || mongoose.model('Question', questionSchema);
 
 const resultSchema = new mongoose.Schema({
-  studentId: String,
-  testId: String,
-  score: Number,
+  studentId: { type: String, required: true },
+  testId: { type: String, required: true },
+  score: { type: Number, required: true },
   rank: Number,
-  submittedAt: Date,
+  submittedAt: { type: Date, default: Date.now },
   answers: [{
     questionId: String,
     selectedAnswer: mongoose.Schema.Types.Mixed,
@@ -84,8 +97,8 @@ resultSchema.index({ testId: 1, studentId: 1 }, { unique: true });
 const Result = mongoose.models.Result || mongoose.model('Result', resultSchema);
 
 const discussionSchema = new mongoose.Schema({
-  testId: String,
-  title: String,
+  testId: { type: String, required: true },
+  title: { type: String, required: true },
   description: String,
   link: String,
   createdAt: { type: Date, default: Date.now }
@@ -94,8 +107,8 @@ const Discussion = mongoose.models.Discussion || mongoose.model('Discussion', di
 
 const messageSchema = new mongoose.Schema({
   studentId: String,
-  sender: { type: String, enum: ['student', 'admin'] },
-  content: String,
+  sender: { type: String, enum: ['student', 'admin'], required: true },
+  content: { type: String, required: true },
   isUnblockRequest: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
 });
@@ -107,7 +120,7 @@ const configSchema = new mongoose.Schema({
 });
 const Config = mongoose.models.Config || mongoose.model('Config', configSchema);
 
-// ========== Auth Routes ==========
+// ========== AUTH ROUTES ==========
 app.post('/api/auth/admin/login', async (req, res) => {
   const { username, password } = req.body;
   if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
@@ -119,19 +132,27 @@ app.post('/api/auth/admin/login', async (req, res) => {
 
 app.post('/api/auth/student/login', async (req, res) => {
   const { studentId, dob } = req.body;
-  const student = await Student.findOne({ studentId });
-  if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-  if (student.dob !== dob) return res.status(401).json({ success: false, message: 'Invalid DOB' });
-  if (student.status === 'blocked') {
-    return res.status(403).json({ success: false, blocked: true, reason: student.blockReason });
+  try {
+    const student = await Student.findOne({ studentId });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    if (student.dob !== dob) return res.status(401).json({ success: false, message: 'Invalid DOB' });
+    if (student.status === 'blocked') {
+      return res.status(403).json({ success: false, blocked: true, reason: student.blockReason });
+    }
+    res.json({ success: true, student });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  res.json({ success: true, student });
 });
 
-// ========== Students ==========
+// ========== STUDENTS ==========
 app.get('/api/students', async (req, res) => {
-  const students = await Student.find().sort('studentId');
-  res.json(students);
+  try {
+    const students = await Student.find().sort('studentId');
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/students', async (req, res) => {
@@ -144,21 +165,33 @@ app.post('/api/students', async (req, res) => {
 });
 
 app.put('/api/students/:id/block', async (req, res) => {
-  await Student.findOneAndUpdate({ studentId: req.params.id },
-    { status: 'blocked', blockReason: req.body.reason, blockedAt: new Date() });
-  res.json({ success: true });
+  try {
+    await Student.findOneAndUpdate({ studentId: req.params.id },
+      { status: 'blocked', blockReason: req.body.reason, blockedAt: new Date() });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.put('/api/students/:id/unblock', async (req, res) => {
-  await Student.findOneAndUpdate({ studentId: req.params.id },
-    { status: 'active', blockReason: null, blockedAt: null });
-  res.json({ success: true });
+  try {
+    await Student.findOneAndUpdate({ studentId: req.params.id },
+      { status: 'active', blockReason: null, blockedAt: null });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-// ========== Tests ==========
+// ========== TESTS ==========
 app.get('/api/tests', async (req, res) => {
-  const tests = await Test.find().sort('testId');
-  res.json(tests);
+  try {
+    const tests = await Test.find().sort('testId');
+    res.json(tests);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/tests', async (req, res) => {
@@ -171,22 +204,34 @@ app.post('/api/tests', async (req, res) => {
 });
 
 app.put('/api/tests/:id', async (req, res) => {
-  await Test.findOneAndUpdate({ testId: req.params.id }, req.body);
-  res.json({ success: true });
+  try {
+    await Test.findOneAndUpdate({ testId: req.params.id }, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.delete('/api/tests/:id', async (req, res) => {
-  await Test.deleteOne({ testId: req.params.id });
-  await Question.deleteMany({ testId: req.params.id });
-  await Result.deleteMany({ testId: req.params.id });
-  await Discussion.deleteMany({ testId: req.params.id });
-  res.json({ success: true });
+  try {
+    await Test.deleteOne({ testId: req.params.id });
+    await Question.deleteMany({ testId: req.params.id });
+    await Result.deleteMany({ testId: req.params.id });
+    await Discussion.deleteMany({ testId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-// ========== Questions ==========
+// ========== QUESTIONS ==========
 app.get('/api/questions/:testId', async (req, res) => {
-  const questions = await Question.find({ testId: req.params.testId }).sort('questionId');
-  res.json(questions);
+  try {
+    const questions = await Question.find({ testId: req.params.testId }).sort('questionId');
+    res.json(questions);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/questions', async (req, res) => {
@@ -199,33 +244,47 @@ app.post('/api/questions', async (req, res) => {
 });
 
 app.put('/api/questions/:id', async (req, res) => {
-  await Question.findByIdAndUpdate(req.params.id, req.body);
-  res.json({ success: true });
+  try {
+    await Question.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.delete('/api/questions/:id', async (req, res) => {
-  await Question.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
+  try {
+    await Question.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-// CSV Upload
+// ========== CSV UPLOAD ==========
 app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, res) => {
   const testId = req.params.testId;
-  if (!req.file) return res.status(400).json({ success: false, message: 'No file' });
+  if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
-  const results = [], errors = [];
+  const results = [];
+  const errors = [];
+
   const bufferStream = new Readable();
   bufferStream.push(req.file.buffer);
   bufferStream.push(null);
 
-  bufferStream.pipe(csv())
+  bufferStream
+    .pipe(csv())
     .on('data', (row) => {
       try {
         const question = {
           testId,
           questionId: row.questionId?.trim(),
           type: row.type?.trim().toLowerCase(),
-          questionText: { en: row.questionText_en?.trim(), hi: row.questionText_hi?.trim() || '' },
+          questionText: {
+            en: row.questionText_en?.trim(),
+            hi: row.questionText_hi?.trim() || ''
+          },
           options: [],
           correctAnswer: null,
           tolerance: row.tolerance ? parseFloat(row.tolerance) : undefined,
@@ -236,6 +295,7 @@ app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, 
           },
           imageUrls: row.imageUrls ? row.imageUrls.split(';').map(s => s.trim()) : []
         };
+
         if (question.type === 'mcq') {
           for (let i = 1; i <= 4; i++) {
             question.options.push({
@@ -244,17 +304,24 @@ app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, 
             });
           }
           question.correctAnswer = parseInt(row.correctAnswer);
-        } else {
+        } else if (question.type === 'numerical') {
           question.correctAnswer = parseFloat(row.correctAnswer);
         }
-        if (!question.questionId || !question.type || !question.questionText.en) throw new Error('Missing fields');
+
+        if (!question.questionId || !question.type || !question.questionText.en) {
+          throw new Error('Missing required fields');
+        }
+
         results.push(question);
       } catch (err) {
         errors.push({ row, error: err.message });
       }
     })
     .on('end', async () => {
-      if (errors.length) return res.status(400).json({ success: false, errors });
+      if (errors.length) {
+        return res.status(400).json({ success: false, errors });
+      }
+
       try {
         const bulkOps = results.map(q => ({
           updateOne: {
@@ -268,85 +335,114 @@ app.post('/api/questions/upload/:testId', upload.single('csvFile'), async (req, 
       } catch (err) {
         res.status(500).json({ success: false, message: err.message });
       }
+    })
+    .on('error', (err) => {
+      res.status(500).json({ success: false, message: err.message });
     });
 });
 
-// ========== Student Test Flow ==========
+// ========== STUDENT TEST FLOW ==========
 app.get('/api/student/available-tests/:studentId', async (req, res) => {
-  const student = await Student.findOne({ studentId: req.params.studentId });
-  if (!student) return res.status(404).json({ success: false });
-  const now = new Date();
-  const tests = await Test.find({
-    allowedClasses: student.class,
-    isLive: true,
-    startTime: { $lte: now },
-    endTime: { $gte: now }
-  });
-  const taken = await Result.find({ studentId: student.studentId }).distinct('testId');
-  const available = tests.filter(t => !taken.includes(t.testId));
-  res.json(available);
+  try {
+    const student = await Student.findOne({ studentId: req.params.studentId });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+
+    const now = new Date();
+    const tests = await Test.find({
+      allowedClasses: student.class,
+      isLive: true,
+      startTime: { $lte: now },
+      endTime: { $gte: now }
+    });
+
+    const taken = await Result.find({ studentId: student.studentId }).distinct('testId');
+    const available = tests.filter(t => !taken.includes(t.testId));
+    res.json(available);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/student/start-test', async (req, res) => {
   const { studentId, testId } = req.body;
-  let result = await Result.findOne({ studentId, testId });
-  if (!result) {
-    result = await Result.create({ studentId, testId, score: 0, answers: [] });
+  try {
+    let result = await Result.findOne({ studentId, testId });
+    if (!result) {
+      result = await Result.create({ studentId, testId, score: 0, answers: [] });
+    }
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  res.json({ success: true, result });
 });
 
 app.post('/api/student/submit-test', async (req, res) => {
   const { studentId, testId, answers } = req.body;
-  const questions = await Question.find({ testId });
-  const test = await Test.findOne({ testId });
-  let score = 0;
-  const answerDetails = [];
+  try {
+    const questions = await Question.find({ testId });
+    const test = await Test.findOne({ testId });
+    if (!test) return res.status(404).json({ success: false, message: 'Test not found' });
 
-  for (let q of questions) {
-    const ans = answers.find(a => a.questionId === q.questionId);
-    let selected = ans ? ans.selectedAnswer : null;
-    let isCorrect = false;
-    let marksAwarded = 0;
-    const marks = q.marks?.correct !== undefined ? q.marks : test.marks;
+    let score = 0;
+    const answerDetails = [];
 
-    if (selected !== null && selected !== '') {
-      if (q.type === 'mcq') {
-        isCorrect = (selected == q.correctAnswer);
+    for (let q of questions) {
+      const ans = answers.find(a => a.questionId === q.questionId);
+      let selected = ans ? ans.selectedAnswer : null;
+      let isCorrect = false;
+      let marksAwarded = 0;
+      const marks = q.marks?.correct !== undefined ? q.marks : test.marks;
+
+      if (selected !== null && selected !== '') {
+        if (q.type === 'mcq') {
+          isCorrect = (selected == q.correctAnswer);
+        } else {
+          isCorrect = Math.abs(parseFloat(selected) - parseFloat(q.correctAnswer)) <= (q.tolerance || 0.01);
+        }
+        marksAwarded = isCorrect ? marks.correct : marks.wrong;
       } else {
-        isCorrect = Math.abs(parseFloat(selected) - parseFloat(q.correctAnswer)) <= (q.tolerance || 0.01);
+        marksAwarded = marks.skip;
       }
-      marksAwarded = isCorrect ? marks.correct : marks.wrong;
-    } else {
-      marksAwarded = marks.skip;
+      score += marksAwarded;
+      answerDetails.push({
+        questionId: q.questionId,
+        selectedAnswer: selected,
+        isCorrect,
+        marksAwarded
+      });
     }
-    score += marksAwarded;
-    answerDetails.push({ questionId: q.questionId, selectedAnswer: selected, isCorrect, marksAwarded });
+
+    const result = await Result.findOneAndUpdate(
+      { studentId, testId },
+      { score, answers: answerDetails, submittedAt: new Date(), paused: false },
+      { new: true, upsert: true }
+    );
+
+    // Update ranks
+    const allResults = await Result.find({ testId }).sort('-score');
+    for (let i = 0; i < allResults.length; i++) {
+      allResults[i].rank = i + 1;
+      await allResults[i].save();
+    }
+
+    res.json({ success: true, score, rank: result.rank });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  const result = await Result.findOneAndUpdate(
-    { studentId, testId },
-    { score, answers: answerDetails, submittedAt: new Date(), paused: false },
-    { new: true, upsert: true }
-  );
-
-  const allResults = await Result.find({ testId }).sort('-score');
-  for (let i = 0; i < allResults.length; i++) {
-    allResults[i].rank = i + 1;
-    await allResults[i].save();
-  }
-
-  res.json({ success: true, score, rank: result.rank });
 });
 
-// ========== Pause / Resume ==========
+// ========== PAUSE / RESUME ==========
 app.post('/api/admin/pause-test', async (req, res) => {
   const { studentId, testId, password } = req.body;
   if (password !== process.env.PAUSE_PASSWORD) {
     return res.status(403).json({ success: false, message: 'Invalid pause password' });
   }
-  await Result.findOneAndUpdate({ studentId, testId }, { paused: true, pausedAt: new Date() });
-  res.json({ success: true });
+  try {
+    await Result.findOneAndUpdate({ studentId, testId }, { paused: true, pausedAt: new Date() });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/admin/resume-test', async (req, res) => {
@@ -354,32 +450,125 @@ app.post('/api/admin/resume-test', async (req, res) => {
   if (password !== process.env.RESUME_PASSWORD) {
     return res.status(403).json({ success: false, message: 'Invalid resume password' });
   }
-  const result = await Result.findOne({ studentId, testId });
-  if (result && result.paused && result.pausedAt) {
-    const pausedDuration = Math.floor((new Date() - result.pausedAt) / 1000);
-    result.totalPausedDuration = (result.totalPausedDuration || 0) + pausedDuration;
+  try {
+    const result = await Result.findOne({ studentId, testId });
+    if (result && result.paused && result.pausedAt) {
+      const pausedDuration = Math.floor((new Date() - result.pausedAt) / 1000);
+      result.totalPausedDuration = (result.totalPausedDuration || 0) + pausedDuration;
+    }
+    result.paused = false;
+    result.pausedAt = null;
+    await result.save();
+    res.json({ success: true, totalPausedDuration: result.totalPausedDuration });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-  result.paused = false;
-  result.pausedAt = null;
-  await result.save();
-  res.json({ success: true, totalPausedDuration: result.totalPausedDuration });
 });
 
 app.get('/api/admin/paused-status/:studentId/:testId', async (req, res) => {
-  const result = await Result.findOne({ studentId: req.params.studentId, testId: req.params.testId });
-  res.json({ paused: result?.paused || false, totalPausedDuration: result?.totalPausedDuration || 0 });
+  try {
+    const result = await Result.findOne({ studentId: req.params.studentId, testId: req.params.testId });
+    res.json({ paused: result?.paused || false, totalPausedDuration: result?.totalPausedDuration || 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
-// ========== Results, Discussions, Messages (similar to previous, but included fully in actual file) ==========
-// ... (same as earlier, omitted for brevity but present in final code)
+// ========== RESULTS ==========
+app.get('/api/results', async (req, res) => {
+  try {
+    const results = await Result.find();
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-// ========== Serve Frontend (only for local dev) ==========
+app.get('/api/results/student/:studentId', async (req, res) => {
+  try {
+    const results = await Result.find({ studentId: req.params.studentId });
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/api/results/test/:testId', async (req, res) => {
+  try {
+    const results = await Result.find({ testId: req.params.testId }).sort('-score');
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== DISCUSSIONS ==========
+app.get('/api/discussions/:testId', async (req, res) => {
+  try {
+    const discussions = await Discussion.find({ testId: req.params.testId }).sort('-createdAt');
+    res.json(discussions);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/discussions', async (req, res) => {
+  try {
+    const discussion = await Discussion.create(req.body);
+    res.json({ success: true, discussion });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/discussions/:id', async (req, res) => {
+  try {
+    await Discussion.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== MESSAGES ==========
+app.get('/api/messages', async (req, res) => {
+  try {
+    const { studentId } = req.query;
+    const filter = studentId ? { studentId } : {};
+    const messages = await Message.find(filter).sort('timestamp');
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/messages', async (req, res) => {
+  try {
+    const message = await Message.create(req.body);
+    res.json({ success: true, message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== SETTINGS ==========
+app.post('/api/settings/password', async (req, res) => {
+  try {
+    await Config.findOneAndUpdate({ key: 'adminPassword' }, { value: req.body.password }, { upsert: true });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========== SERVE FRONTEND (local dev only) ==========
 if (process.env.NODE_ENV !== 'production') {
   app.use('/admin', express.static(path.join(__dirname, '../frontend/admin')));
   app.use('/student', express.static(path.join(__dirname, '../frontend/student')));
   app.get('/', (req, res) => res.redirect('/student'));
 }
 
+// For Vercel serverless
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
