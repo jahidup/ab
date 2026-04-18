@@ -8,7 +8,6 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
         <h2>NexGen Admin</h2>
@@ -30,7 +29,6 @@
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
       <header class="main-header">
         <h1 id="pageTitle">Dashboard</h1>
@@ -41,26 +39,157 @@
       </header>
 
       <div class="content-area">
-        <!-- All tab panes -->
-        <div id="dashboard" class="tab-pane active">...</div>
-        <div id="students" class="tab-pane">...</div>
-        <div id="tests" class="tab-pane">...</div>
-        <div id="questions" class="tab-pane">...</div>
-        <div id="results" class="tab-pane">...</div>
-        <div id="discussions" class="tab-pane">...</div>
-        <div id="messages" class="tab-pane">...</div>
-        <div id="blocked" class="tab-pane">...</div>
-        <div id="monitor" class="tab-pane">...</div>
-        <div id="settings" class="tab-pane">...</div>
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-pane active">
+          <div class="stats-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+            <div class="stat-card">
+              <h3>Total Students</h3>
+              <p id="totalStudents" class="stat-number">0</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Tests</h3>
+              <p id="totalTests" class="stat-number">0</p>
+            </div>
+            <div class="stat-card">
+              <h3>Total Questions</h3>
+              <p id="totalQuestions" class="stat-number">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Students -->
+        <div id="students" class="tab-pane">
+          <div class="action-bar">
+            <input type="text" id="studentSearch" placeholder="Search by ID or name" onkeyup="filterStudents()">
+            <button class="btn-primary" onclick="openAddStudentModal()">+ Add Student</button>
+          </div>
+          <table id="studentsTable" class="data-table">
+            <thead><tr><th>ID</th><th>Name</th><th>DOB</th><th>Class</th><th>Mobile</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Tests -->
+        <div id="tests" class="tab-pane">
+          <div class="action-bar">
+            <input type="text" id="testSearch" placeholder="Search by ID or name" onkeyup="filterTests()">
+            <button class="btn-primary" onclick="openCreateTestModal()">+ Create Test</button>
+          </div>
+          <table id="testsTable" class="data-table">
+            <thead><tr><th>ID</th><th>Name</th><th>Duration</th><th>Marks</th><th>Shuffle</th><th>Live</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Questions -->
+        <div id="questions" class="tab-pane">
+          <div class="action-bar">
+            <select id="testSelectForQuestions" onchange="loadQuestions()">
+              <option value="">-- Select Test --</option>
+            </select>
+            <input type="text" id="questionSearch" placeholder="Search" onkeyup="filterQuestions()">
+            <button class="btn-primary" onclick="openAddQuestionModal()">+ Add Question</button>
+            <label class="btn-outline" style="cursor:pointer;">
+              <input type="file" id="csvFileInput" accept=".csv" style="display:none">
+              📁 Choose CSV
+            </label>
+            <button class="btn-success" id="uploadCsvBtn" style="display:none;" onclick="uploadCSV()">Upload CSV</button>
+          </div>
+          <table id="questionsTable" class="data-table">
+            <thead><tr><th>ID</th><th>Type</th><th>Question</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="tab-pane">
+          <div class="action-bar">
+            <select id="testFilterResults" onchange="loadResults()">
+              <option value="">All Tests</option>
+            </select>
+            <input type="text" id="resultSearch" placeholder="Search" onkeyup="filterResults()">
+            <button class="btn-primary" onclick="loadResults()">Load Results</button>
+          </div>
+          <table id="resultsTable" class="data-table">
+            <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Rank</th><th>Submitted</th><th>Analysis</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Discussions -->
+        <div id="discussions" class="tab-pane">
+          <div class="action-bar">
+            <select id="testSelectDiscussions" onchange="loadDiscussions()">
+              <option value="">-- Select Test --</option>
+            </select>
+            <button class="btn-primary" onclick="openNewPostModal()">+ New Post</button>
+          </div>
+          <div id="discussionsList" class="discussions-list"></div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages" class="tab-pane">
+          <div id="messagesContainer" class="messages-container"></div>
+          <div id="replyBox" class="message-input-area" style="display:none;">
+            <textarea id="replyContent" placeholder="Type your reply..."></textarea>
+            <button class="btn-primary" onclick="sendReply()">Send</button>
+            <button class="btn-outline" onclick="cancelReply()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Blocked Students -->
+        <div id="blocked" class="tab-pane">
+          <table id="blockedTable" class="data-table">
+            <thead><tr><th>ID</th><th>Name</th><th>Reason</th><th>Blocked At</th><th>Action</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Monitor Tests -->
+        <div id="monitor" class="tab-pane">
+          <div class="action-bar">
+            <select id="activeTestSelect" onchange="loadTestTakers()">
+              <option value="">-- Select Live Test --</option>
+            </select>
+          </div>
+          <table id="testTakersTable" class="data-table">
+            <thead><tr><th>Student ID</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- Settings -->
+        <div id="settings" class="tab-pane">
+          <div class="card">
+            <h3>Change Admin Password</h3>
+            <div class="input-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword" placeholder="Enter new password">
+            </div>
+            <button class="btn-primary" onclick="updatePassword()">Update Password</button>
+            <p class="note">Credentials are stored in Vercel environment variables.</p>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 
-  <!-- Modal overlay -->
+  <!-- Modal Overlay -->
   <div id="modalOverlay" class="modal-overlay" style="display:none;">
     <div class="modal" id="modalContent"></div>
   </div>
 
+  <!-- Global Loading Overlay -->
+  <div id="globalLoading" class="loading-overlay" style="display:none;">
+    <div class="loading-spinner-large"></div>
+  </div>
+
   <script src="admin.js"></script>
+  <script>
+    // Auth check
+    if (!localStorage.getItem('adminToken')) {
+      location.replace('index.html');
+    }
+  </script>
 </body>
 </html>
