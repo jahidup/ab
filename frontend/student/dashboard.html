@@ -8,7 +8,6 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
         <h2>NexGen Student</h2>
@@ -24,7 +23,6 @@
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
       <header class="main-header">
         <h1 id="pageTitle">Available Tests</h1>
@@ -34,7 +32,6 @@
         </div>
       </header>
 
-      <!-- Profile Card -->
       <div class="profile-card">
         <div class="profile-info">
           <h3>Welcome, <span id="studentName"></span></h3>
@@ -47,36 +44,30 @@
       </div>
 
       <div class="content-area">
-        <!-- Available Tests Tab -->
         <div id="availableTests" class="tab-pane active">
           <div id="testsList" class="tests-grid"></div>
         </div>
 
-        <!-- Previous Results Tab -->
         <div id="previousResults" class="tab-pane">
           <table id="resultsTable" class="data-table">
-            <thead>
-              <tr><th>Test</th><th>Score</th><th>Rank</th><th>Submitted</th><th>Analysis</th></tr>
-            </thead>
+            <thead><tr><th>Test</th><th>Score</th><th>Rank</th><th>Submitted</th><th>Analysis</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
 
-        <!-- Discussions Tab -->
         <div id="discussions" class="tab-pane">
-          <div class="filter-bar">
-            <select id="testSelectDiscussions" class="select-filter">
+          <div class="action-bar">
+            <select id="testSelectDiscussions" onchange="loadDiscussions()">
               <option value="">-- Select Test --</option>
             </select>
           </div>
           <div id="discussionsList" class="discussions-list"></div>
         </div>
 
-        <!-- Messages Tab -->
         <div id="messages" class="tab-pane">
           <div id="messagesContainer" class="messages-container"></div>
           <div class="message-input-area">
-            <textarea id="newMessage" placeholder="Type your message here..."></textarea>
+            <textarea id="newMessage" placeholder="Type your message..."></textarea>
             <button class="btn-primary" onclick="sendMessage()">Send</button>
             <p id="messageWarning" class="warning-text"></p>
           </div>
@@ -85,22 +76,24 @@
     </main>
   </div>
 
-  <!-- Test Taking Modal -->
+  <!-- Test Modal -->
   <div id="testModal" class="modal-overlay" style="display:none;">
     <div class="modal test-modal">
       <div id="testInterface"></div>
     </div>
   </div>
 
+  <!-- Global Loading Overlay -->
+  <div id="globalLoading" class="loading-overlay" style="display:none;">
+    <div class="loading-spinner-large"></div>
+  </div>
+
   <script src="student.js"></script>
   <script>
-    // Immediate authentication check – prevent loops
-    (function() {
-      const student = localStorage.getItem('student');
-      if (!student) {
-        location.replace('index.html');
-      }
-    })();
+    // Immediate auth check
+    if (!localStorage.getItem('student')) {
+      location.replace('index.html');
+    }
   </script>
 </body>
 </html>
