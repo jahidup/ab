@@ -22,7 +22,10 @@
           <label>Password</label>
           <input type="password" id="password" placeholder="••••••••">
         </div>
-        <button id="loginBtn" class="btn-primary">Sign In</button>
+        <button id="loginBtn" class="btn-primary" style="width:100%;">
+          <span id="loginText">Sign In</span>
+          <span id="loginSpinner" class="loading-spinner" style="display:none;"></span>
+        </button>
         <p id="errorMsg" class="error-msg"></p>
       </div>
       <div class="login-footer">
@@ -31,22 +34,50 @@
     </div>
   </div>
   <script>
-    document.getElementById('loginBtn').onclick = async () => {
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const res = await fetch('/api/auth/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('adminToken', data.token);
-        location.replace('dashboard.html');
-      } else {
-        document.getElementById('errorMsg').innerText = data.message;
+    // Prevent loops
+    if (localStorage.getItem('adminToken')) {
+      location.replace('dashboard.html');
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorEl = document.getElementById('errorMsg');
+      const btn = document.getElementById('loginBtn');
+      const text = document.getElementById('loginText');
+      const spinner = document.getElementById('loginSpinner');
+
+      if (!username || !password) {
+        errorEl.textContent = 'Please fill in all fields';
+        return;
       }
-    };
+
+      btn.disabled = true;
+      text.style.display = 'none';
+      spinner.style.display = 'inline-block';
+      errorEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/auth/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.setItem('adminToken', data.token);
+          location.replace('dashboard.html');
+        } else {
+          errorEl.textContent = data.message || 'Invalid credentials';
+        }
+      } catch (err) {
+        errorEl.textContent = 'Network error. Please try again.';
+      } finally {
+        btn.disabled = false;
+        text.style.display = 'inline';
+        spinner.style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
