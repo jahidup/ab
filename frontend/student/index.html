@@ -22,7 +22,10 @@
           <label>Date of Birth (DDMMYYYY)</label>
           <input type="text" id="dob" placeholder="01012005" maxlength="8">
         </div>
-        <button id="loginBtn" class="btn-primary">Sign In</button>
+        <button id="loginBtn" class="btn-primary" style="width:100%;">
+          <span id="loginText">Sign In</span>
+          <span id="loginSpinner" class="loading-spinner" style="display:none;"></span>
+        </button>
         <p id="errorMsg" class="error-msg"></p>
       </div>
       <div class="login-footer">
@@ -30,15 +33,15 @@
       </div>
     </div>
 
-    <!-- Blocked account modal (hidden by default) -->
+    <!-- Blocked Modal -->
     <div id="blockedModal" class="modal-overlay" style="display:none;">
       <div class="modal">
         <h3>Account Blocked</h3>
         <p>Your account has been blocked.</p>
         <p><strong>Reason:</strong> <span id="blockReason"></span></p>
-        <div class="form-group">
+        <div class="input-group">
           <label>Message to Admin (optional)</label>
-          <textarea id="unblockMessage" rows="2" placeholder="Explain why you should be unblocked..."></textarea>
+          <textarea id="unblockMessage" rows="2"></textarea>
         </div>
         <div class="modal-actions">
           <button class="btn-primary" onclick="sendUnblockRequest()">Request Unblock</button>
@@ -47,11 +50,9 @@
       </div>
     </div>
   </div>
-
   <script>
-    // If already logged in, redirect to dashboard (no loop)
-    const existingStudent = localStorage.getItem('student');
-    if (existingStudent) {
+    // Prevent loops
+    if (localStorage.getItem('student')) {
       location.replace('dashboard.html');
     }
 
@@ -61,11 +62,19 @@
       const studentId = document.getElementById('studentId').value.trim();
       const dob = document.getElementById('dob').value.trim();
       const errorEl = document.getElementById('errorMsg');
+      const btn = document.getElementById('loginBtn');
+      const text = document.getElementById('loginText');
+      const spinner = document.getElementById('loginSpinner');
 
       if (!studentId || !dob) {
         errorEl.textContent = 'Please fill in all fields';
         return;
       }
+
+      btn.disabled = true;
+      text.style.display = 'none';
+      spinner.style.display = 'inline-block';
+      errorEl.textContent = '';
 
       try {
         const res = await fetch('/api/auth/student/login', {
@@ -74,7 +83,6 @@
           body: JSON.stringify({ studentId, dob })
         });
         const data = await res.json();
-
         if (data.success) {
           localStorage.setItem('student', JSON.stringify(data.student));
           location.replace('dashboard.html');
@@ -82,32 +90,30 @@
           blockedStudentId = studentId;
           document.getElementById('blockReason').textContent = data.reason;
           document.getElementById('blockedModal').style.display = 'flex';
-          errorEl.textContent = '';
         } else {
           errorEl.textContent = data.message || 'Login failed';
         }
       } catch (err) {
         errorEl.textContent = 'Network error. Please try again.';
+      } finally {
+        btn.disabled = false;
+        text.style.display = 'inline';
+        spinner.style.display = 'none';
       }
     });
 
     window.sendUnblockRequest = async () => {
-      const message = document.getElementById('unblockMessage').value.trim() || 'Please unblock my account';
+      const msg = document.getElementById('unblockMessage').value.trim() || 'Please unblock my account';
       try {
         await fetch('/api/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            studentId: blockedStudentId,
-            sender: 'student',
-            content: message,
-            isUnblockRequest: true
-          })
+          body: JSON.stringify({ studentId: blockedStudentId, sender: 'student', content: msg, isUnblockRequest: true })
         });
-        alert('Unblock request sent to admin.');
+        alert('Request sent to admin.');
         closeBlockedModal();
       } catch (err) {
-        alert('Failed to send request. Try again later.');
+        alert('Failed to send request.');
       }
     };
 
